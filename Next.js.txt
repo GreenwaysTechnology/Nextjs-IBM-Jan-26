@@ -1117,6 +1117,287 @@ export default function Post() {
         </ul>
     </div>
 }
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&\										Patterns for client and server components
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+1.Server component uses another Server Component
+   inside layout.js we use page.js
+   inside page.js we use UserList.js
+
+2.Server component uses client component
+
+3.Client component uses another server component
+
+4.Client component uses another client component
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+					  1.Server component uses another Server Component
+
+Rules:
+Any server can use any server component without using any special keywords
+
+app/patterns/serverusesserver/layout.js
+//server component
+export default function ServerLayout({children}) {
+     return <div>
+            {children}
+     </div>
+}
+
+app/patterns/serverusesserver/page.js
+
+import Hello from "@/app/patterns/serverusesserver/components/Hello";
+
+
+export default function ServerPage() {
+    return <>
+        <h1>Server Page</h1>
+        <Hello/>
+    </>
+}
+
+app/patterns/serverusesserver/components/Hello
+//server component
+export default function Hello() {
+    return <h1>Hello Component</h1>
+}
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+								2.Server component uses client component
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+Rules:
+1.If server components uses client, the client component must be marked 'use client' directive, if you dont mark , you get "build time" error
+
+
+app/patterns/serverusesclient/page.js
+
+app/patterns/serverusesserver/layout.js
+//server component
+export default function ServerLayout({children}) {
+     return <div>
+            {children}
+     </div>
+}
+
+app/patterns/serverusesserver/page.js
+import { Counter } from "@/app/patterns/serverusesclient/components/Counter";
+
+
+export default function ServerPage() {
+    return <>
+        <h1>Server Page</h1>
+        <Counter />
+    </>
+}
+app/patterns/serverusesserver/components/Counter.jsx
+'use client'
+import { useState } from "react"
+
+export function Counter() {
+    const [counter, setCounter] = useState(0)
+    return <div>
+        <h1>Counter : {counter}</h1>
+        <button onClick={() => {
+            setCounter(counter + 1)
+            console.log(counter)
+        }} className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700">+</button>
+    </div>
+}
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+									Client component uses another server component
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+app/patterns/clientusesserver/layout.js
+//server component
+export default function ServerLayout({children}) {
+     return <div>
+            {children}
+     </div>
+}
+app/patterns/clientusesserver/page.js
+import { Counter } from "@/app/patterns/clientusesserver/components/Counter";
+
+
+export default function ServerPage() {
+    return <>
+        <Counter />
+    </>
+}
+
+app/patterns/clientusesserver/components/CounterHeader.jsx
+//server component
+export default function CounterHeader(){
+        return <h1>Counter App!!</h1>
+}
+
+app/patterns/clientusesserver/components/Counter.jsx
+
+'use client'
+import { useState } from "react"
+
+import CounterHeader from "@/app/patterns/clientusesserver/components/CounterHeader";
+
+export function Counter() {
+    const [counter, setCounter] = useState(0)
+    return <div>
+        {/* Server Component: Client Component uses another Component */}
+        <CounterHeader />
+        <h1>Counter : {counter}</h1>
+        <button onClick={() => {
+            setCounter(counter + 1)
+            console.log(counter)
+        }} className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700">+</button>
+    </div>
+}
+
+Rules
+			 if client uses another server component,"server component automatically becomes client component"
+						 	When we use this pattern we loose server rendering
+
+In the above code Server component runs in the client only.
+***********************************************************************************************************************************************************
+				What if "client uses server component" but at the same time, i dont want to loose server rendering feature?
+Solution:
+     Pass Server Component as Prop to Child  component.
+
+app/patterns/clientusesserver/layout.js
+//server component
+export default function ServerLayout({children}) {
+     return <div>
+            {children}
+     </div>
+}
+app/patterns/clientusesserver/page.js
+import { Counter } from "@/app/patterns/clientusesserver/components/Counter";
+import CounterHeader from "@/app/patterns/clientusesserver/components/CounterHeader";
+
+
+export default function ServerPage() {
+    return <>
+        {/* <Counter /> */}
+        {/* Pass Server Component as Prop */}
+        <Counter>
+            <CounterHeader/>
+        </Counter>
+    </>
+}
+app/patterns/clientusesserver/components/CounterHeader.jsx
+//server component
+export default function CounterHeader(){
+        return <h1>Counter App!!</h1>
+}
+
+app/patterns/clientusesserver/components/Counter.jsx
+
+'use client'
+import { useState } from "react"
+
+// import CounterHeader from "@/app/patterns/clientusesserver/components/CounterHeader";
+
+
+export function Counter(props) {
+    const [counter, setCounter] = useState(0)
+    return <div>
+        {/* Server Component: Client Component uses another Component
+        <CounterHeader /> */}
+
+        {/* Receive Server Component as Child */}
+        {props.children}
+
+        <h1>Counter : {counter}</h1>
+        <button onClick={() => {
+            setCounter(counter + 1)
+            console.log(counter)
+        }} className="text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-4 focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-gray-800 dark:hover:bg-gray-700 dark:focus:ring-gray-700 dark:border-gray-700">+</button>
+    </div>
+}
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+									Client Component uses another client Component
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+app/patterns/clientusesclient/layout.js
+//server component
+export default function ServerLayout({children}) {
+     return <div>
+            {children}
+     </div>
+}
+app/patterns/clientusesclient/page.js
+import ClientOne from "@/app/patterns/clientusesclient/components/ClientOne";
+
+
+export default function ServerPage() {
+    return <>
+        <ClientOne />
+    </>
+}
+app/patterns/clientusesclient/components/ClientOne.jsx
+'use client'
+
+import ClientTwoComponent from "@/app/patterns/clientusesclient/components/ClientTwo";
+
+export default function ClientOneComponent() {
+
+    return <>
+        <h1>Client One</h1>
+        <ClientTwoComponent />
+    </>
+
+}
+app/patterns/clientusesclient/component/ClientTwo.jsx
+
+'use client'
+
+export default function ClientTwoComponent() {
+
+    return <>
+        <h1>Client Two</h1>
+    </>
+
+}
+Note :
+
+	  If client component uses another client component, that another client component no need to use 'use client' directive.
+								Incase the same client used by another server component,				
+									'use client' directive must be three
+eg:
+app/patterns/clientusesclient/component/ClientTwo.jsx
+
+export default function ClientTwoComponent() {
+
+    return <>
+        <h1>Client Two</h1>
+    </>
+
+}
+
+React carbon Integration:
+
+1.npm install -S @carbon/react
+
+app/patterns/clientusesclient/component/MyButton.jsx
+
+'use client'
+
+import { Button } from "@carbon/react"
+
+export default function MyButton() {
+
+    return <div>
+        <h1>React Carbon Lib</h1>
+        <Button>Hello</Button>
+    </div>
+
+}
+
+app/patterns/clientusesclient/page.js
+import MyButton from "@/app/patterns/clientusesclient/components/MyButton";
+export default function ServerPage() {
+    return <>
+        <MyButton />
+    </>
+}
 
 
 
