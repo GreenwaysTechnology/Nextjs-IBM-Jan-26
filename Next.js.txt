@@ -893,12 +893,230 @@ export default function TodosPage() {
 Task:
 Display Post Details using components
 Mock data : https://jsonplaceholder.typicode.com/posts
-
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 											 Components Types
 											  (Rendering Types)
 &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
+
+Rendering is nothing but page preparation (html creation).
+
+How to create html and where to create Html?
+
+Where:
+     rendering can take place in the server or on the client.
+
+When:
+  At Server side:
+    It can happen either ahead of time during build time.
+    or on every Request at runtime.
+
+With next js , two types of rendering methods are available.
+
+1.Server-side rendering
+   1.0. Request time
+   1.1. Static site Generation - build time
+   1.2. ISR - Incremental Static rendering - first Build time and later runtime.
+
+2.Client-side Rendering
+   Preparing portion of page at client side , which is similar to SPA Apps. -  It is just like JQuery with Php/Java/DotNet
+
+Component types:
+ Based on Rendering, we can classify the component into two category.
+
+1.Server Component
+   Server components are rendered at server side
+2.Client components
+   Clients components are rendered at client side
+
+					By default all components are "Server Rendered Components"
+
+   page,layouts,templates,notfound,loading,default all are server components only
+
+Even When we create custom components
+
+export default function Greet(props) {
+     return <>
+        <h1>{props.message}</h1>
+     </>
+}
+...........................................................................................................................................................................................................................................
+										 	Client Component
+...........................................................................................................................................................................................................................................
+Component which may have logic to interact with user like button clicks,typing,animations,data fetch at client side,hooks, any dom manipulation......
+
+The components can be co-located..
+
+	Client components allow us to write interactive UI that is prendered on the server and can use client javascript to run in the browser.
+
+Advantages of client Rendering:
+
+1.Interactivity
+   Client components uses "state,effects,event listener" , meaning they can provide immediate feedback to the user and update the UI.
+
+2.Browser APIs:
+     Client components have access the browser apis like Storage,geo location....
+
+
+src/app/counter/components/Counter.jsx
+import { useState } from "react"
+
+export function Counter() {
+    const [value, setValue] = useState(0)
+
+    return <>
+        <h1>Value : {value}</h1>
+    </>
+}
+
+src/app/counter/page.js
+import { Counter } from "@/app/counter/compoents/Counter";
+
+export default function CounterPage(){
+    return <div>
+        <h1>Counter</h1>
+        <Counter/>
+    </div>
+}
+After running:
+
+./src/app/counter/compoents/Counter.jsx (1:10)
+
+Ecmascript file had an error
+> 1 | import { useState } from "react"
+    |          ^^^^^^^^
+  2 |
+  3 | export function Counter() {
+  4 |     const [value, setValue] = useState(0)
+
+You're importing a component that needs `useState`. This React Hook only works in a Client Component. To fix, mark the file (or its parent) with the `"use client"` directive.
+
+ Learn more: https://nextjs.org/docs/app/api-reference/directives/use-client
+
+Import trace:
+  ./src/app/counter/compoents/Counter.jsx
+  ./src/app/counter/page.js
+
+
+How to fix this?
+
+Convert the component into client components, so that next will bundle this component and send to the browser, so browser starts hyderating this code.
+
+How to tell to the next server?
+
+//directive is nothing but instructions to the compiler
+
+"use client" // directive
+
+import { useState } from "react"
+
+export function Counter() {
+    const [value, setValue] = useState(0)
+
+    return <>
+        <h1>Value : {value}</h1>
+        <button onClick={() => {
+            setValue(value + 1)
+            console.log(value)
+        }}>+</button>
+    </>
+}
+
+How to know the client component?
+
+if component has 
+
+1.useState hook or any hook
+2.Any listener
+3.useEffect hook
+4.Browser apis
+5.state declaration
+
+Task:
+  CURD operation using Array
+
+'use client'
+import { useState } from "react"
+
+export default function Post() {
+    const [posts, setPosts] = useState([{
+        id: 1, title: 'React', body: 'This is React Post'
+    },
+    {
+        id: 2, title: 'Angular', body: 'This is Angular Post'
+    }
+    ])
+    //Edit or update status
+    const [isEditing, setIsEditing] = useState(false)
+    const [form, setForm] = useState({ title: '', body: '', id: null })
+
+    const handleSubmit = (e) => {
+        e.preventDefault()
+        isEditing ? updatePost() : addPost()
+    }
+    const updatePost = () => {
+        console.log('updatePost')
+        setPosts(posts.map(post => post.id === form.id ? form : post))
+        setIsEditing(false)
+        clearForm()
+    }
+    const addPost = () => {
+        //console.log('addPost')
+        const newPost = { id: posts.length + 1, form: form.title, body: form.body }
+        setPosts([...posts, newPost])
+        clearForm()
+    }
+    const clearForm = () => {
+        setForm({ title: '', body: '', id: null })
+    }
+    const handleEdit = (post) => {
+        setIsEditing(true)
+        setForm({ title: post.title, body: post.body, id: post.id })
+    }
+    const handleDelete = id => {
+        setPosts(posts.filter(post => post.id !== id))
+    }
+
+
+    // render list of posts
+    return <div>
+        {/* form to add edit posts */}
+        {/* Todo: remove this once the testing is over */}
+        {JSON.stringify(form)}
+        <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: 10 }}>
+                <input onChange={(e) => {
+                    setForm({ ...form, title: e.target.value })
+                }} value={form.title} placeholder="Title" />
+            </div>
+            <div style={{ marginBottom: 10 }}>
+                <textarea onChange={(e) => {
+                    setForm({ ...form, body: e.target.value })
+                }} value={form.body} placeholder="Body"></textarea>
+            </div>
+            <div style={{ marginBottom: 10 }}>
+                <button className="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">{isEditing ? "Update" : "Add "}Post</button>
+            </div>
+        </form>
+        <ul>
+            {
+                posts.map(post => {
+                    return <li key={post.id}>
+                        <h1>{post.title}</h1>
+                        <p>{post.body}</p>
+                        <button onClick={() => {
+                            handleEdit(post)
+                        }} className="focus:outline-none text-white bg-green-700 hover:bg-green-800 focus:ring-4 focus:ring-green-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-green-600 dark:hover:bg-green-700 dark:focus:ring-green-800">Edit</button>
+                        <button onClick={() => {
+                            handleDelete(post.id)
+                        }} className="focus:outline-none text-white bg-red-700 hover:bg-red-800 focus:ring-4 focus:ring-red-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-900">Delete</button>
+                    </li>
+                })
+            }
+        </ul>
+    </div>
+}
 
 
 
