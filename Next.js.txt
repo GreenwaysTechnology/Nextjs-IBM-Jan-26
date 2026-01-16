@@ -2115,31 +2115,44 @@ How to convert  Client Pagination to Server side Pagniation?
 
 Via <Link> Component - Server side Pagination
 
+app/products/components/
+styles.css
+.disabled {
+  pointer-events: none;   /* stops click */
+  opacity: 0.5;           /* visual disabled */
+  cursor: not-allowed;
+}
+
 app/products/components/ServerPagination.jsx
 import Link from 'next/link'
+import './styles.css'
 
 export default function ServerPagination({ currentPage, totalPages }) {
-  return (
-    <nav>
-      <Link
-        href={`/products?page=${currentPage - 1}`}
-        disabled={currentPage <= 1}
-      >
-        Previous ||
-      </Link>
-      <Link
-        href={`/products?page=${currentPage + 1}`}
-        disabled={currentPage >= totalPages}
-      >
-          Next 
-      </Link>
-      <div>
-        <span>Page {currentPage} of {totalPages}</span>
-      </div>
+    console.log(currentPage)
+    return (
+        <nav>
+            {currentPage > 1 ? (
+                <Link href={`/products?page=${currentPage - 1}`}>
+                    Previous    |
+                </Link>
+            ) : (
+                <span className="disabled">Previous | </span>
+            )}
+            {currentPage < totalPages ? (
+                <Link href={`/products?page=${currentPage + 1}`}>
+                    Next
+                </Link>
+            ) : (
+                <span className="disabled">Next</span>
+            )}
+            <div>
+                <span>Page {currentPage} of {totalPages}</span>
+            </div>
 
-    </nav>
-  )
+        </nav>
+    )
 }
+
 
 app/products/page.js
 import ServerPagination from './components/ServerPagination'
