@@ -1,5 +1,5 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+// import "./globals.css";
 import Link from "next/link";
 
 const geistSans = Geist({
@@ -30,6 +30,9 @@ export default function RootLayout({ children }) {
             </li>
             <li>
               <Link href="/posts">Posts</Link>
+            </li>
+              <li>
+              <Link href="/products">Products</Link>
             </li>
           </ul>
         </nav>

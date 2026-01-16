@@ -1974,5 +1974,204 @@ export default async function PostDetailsPage(props) {
         </section>
     </div>
 }
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+										Shallow Routing
+	Shallow routing in Next.js is a technique that updates the URL in the browser without triggering a full page reload or re-running the data fetching methods generateStaticParams.
+
+This is useful for UI updates that should reflect in the URL but don't require fetching new data or re-rendering the entire page.
+
+How Shallow Routing Works
+
+It updates the path or query parameters using the HTML5 History API without causing a full navigation.
+Keeps the current state and component tree intact, avoiding expensive data refetches.
+Only works for URL changes within the same page route.
+
+Key Points
+
+1.Calling router.push with { shallow: true } changes the URL but keeps the page and state intact.
+
+Useful for paginations, tabs, filters where data fetching does not need to be repeated.
+
+If you navigate to a completely different page route, shallow routing will not apply and the full page reload will happen.
+
+Shallow routing optimizes user experience by minimizing reloads and preserving UI state while making the URL reflect current app state.
+
+Shallow routing syntax:
+
+ router.push('path',data,{shallow:true})
+
+Parameters:
+1.dynamic parameter
+    /products/1 or /products/2
+2.Query Parameter
+  /products?page=1
+	|             |
+	URL    Query parameter(variable)=value
+
+app/products/page.js
+import Pagination from './components/Pagination'
+
+
+export default async function ProductsPage() {
+  return (
+    <main>
+      {/* Pagination component handles client-side navigation */}
+      <Pagination />
+    </main>
+  )
+}
+
+app/products/components/Pagination.jsx
+'use client'
+
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useState, useEffect } from 'react'
+
+// Mock data array simulating products
+const allProducts = [
+    'Product 1',
+    'Product 2',
+    'Product 3',
+    'Product 4',
+    'Product 5',
+    'Product 6',
+    'Product 7',
+    'Product 8',
+    'Product 9',
+    'Product 10',
+]
+
+// items per page
+const pageSize = 3 
+
+export default function Pagination() {
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const initialPage = Number(searchParams.get('page')) || 1
+
+    const [page, setPage] = useState(initialPage)
+
+    // Calculate the slice of products for the current page
+    const pagedProducts = allProducts.slice(
+        (page - 1) * pageSize,
+        page * pageSize
+    )
+
+    const changePage = (newPage) => {
+        // Ensure page is within total page count bounds
+        if (newPage < 1 || newPage > Math.ceil(allProducts.length / pageSize)) {
+            return
+        }
+
+        setPage(newPage)
+        //
+        router.push(`/products?page=${newPage}`, undefined, { shallow: true })
+    }
+
+    useEffect(() => {
+        const currentPage = Number(searchParams.get('page')) || 1
+        if (currentPage !== page) {
+            setPage(currentPage)
+        }
+    }, [searchParams])
+
+    return (
+        <div>
+            <h1>Paginated Product List</h1>
+            <ul>
+                {pagedProducts.map((product, index) => (
+                    <li key={index}>{product}</li>
+                ))}
+            </ul>
+
+            <button disabled={page <= 1} onClick={() => changePage(page - 1)}>
+                Previous
+            </button>
+            <button
+                disabled={page >= Math.ceil(allProducts.length / pageSize)}
+                onClick={() => changePage(page + 1)}
+            >
+                Next
+            </button>
+            <p>Page {page} of {Math.ceil(allProducts.length / pageSize)}</p>
+        </div>
+    )
+}
+
+app/layout.js
+       <nav>
+          <ul>
+            <li>
+              <Link href={{ pathname: "/products" }}>Products (Using  Swallow Routing-Pagination)</Link>
+            </li>
+          </ul>
+        </nav>
+************************************************************************************************************************************************************
+										Server side Pagination 
+									
+This pattern gives you SEO-friendly, scalable pagination, works with any data source, and keeps your Next.js app efficient and indexable
+
+How to convert  Client Pagination to Server side Pagniation?
+
+Via <Link> Component - Server side Pagination
+
+app/products/components/ServerPagination.jsx
+import Link from 'next/link'
+
+export default function ServerPagination({ currentPage, totalPages }) {
+  return (
+    <nav>
+      <Link
+        href={`/products?page=${currentPage - 1}`}
+        disabled={currentPage <= 1}
+      >
+        Previous ||
+      </Link>
+      <Link
+        href={`/products?page=${currentPage + 1}`}
+        disabled={currentPage >= totalPages}
+      >
+          Next 
+      </Link>
+      <div>
+        <span>Page {currentPage} of {totalPages}</span>
+      </div>
+
+    </nav>
+  )
+}
+
+app/products/page.js
+import ServerPagination from './components/ServerPagination'
+
+// Mock product data (replace with DB/API fetch in production)
+const allProducts = [
+    'Product 1', 'Product 2', 'Product 3', 'Product 4', 'Product 5',
+    'Product 6', 'Product 7', 'Product 8', 'Product 9', 'Product 10'
+]
+const pageSize = 3
+
+export default async function ProductsPage({ searchParams }) {
+    //searchParam is promise
+    const resolvedSearchParams = await searchParams
+
+    const page = Number(resolvedSearchParams.page) || 1
+
+    const totalPages = Math.ceil(allProducts.length / pageSize)
+    
+    const pagedProducts = allProducts.slice((page - 1) * pageSize, page * pageSize)
+
+    return (
+        <main>
+            <h1>Products</h1>
+            <ul>
+                {pagedProducts.map((product, i) => (
+                    <li key={i}>{product}</li>
+                ))}
+            </ul>
+            <ServerPagination currentPage={page} totalPages={totalPages} />
+        </main>
+    )
+}
 
 
