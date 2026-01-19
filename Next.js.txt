@@ -2876,4 +2876,34 @@ export async function GET(req, { params }) {
 }
 Task:
  You write update, and delete logic
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+									Query Params
+I want to filter data based on certain conditions
+for eg: i want to filter data based on email.
+
+URL :
+ http://localhost:3000/api/users  - GET - GETALL
+   /app/api/users/route.js
+
+http://localhost:3000/api/users/1 - GET - GetBy id
+   /app/api/users/[id]/route.js
+
+Query Param URL Pattern:
+
+http://localhost:3000/api/users/search?email=someemail@gmail.com
+
+Folder Struture
+/app/api/users/search/route.js
+
+import { NextResponse } from "next/server";
+
+export async function GET(req){
+    const { searchParams } = new URL(req.url)
+    const email = searchParams.get("email")
+    //filter data based on email:
+    return NextResponse.json({ email })
+}
+
+Task: wrap the biz logic to filter data based on email
+
 
