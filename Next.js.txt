@@ -4402,3 +4402,69 @@ app/panel/page.js
 export default function PanelPage(){
     return <h1>Panel Page</h1>
 }
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+..........................................................................................................................................................................................................................................
+								Advanced Routing - Route Groups
+...........................................................................................................................................................................................................................................
+
+What is Route Group?
+ In the app dir, nested folders are mapped to URL Paths, How ever you mark a folder as a route group to prevent     the folder being included in the Route's URL path
+
+
+src/app/dashboard/page.js ------> /dashboard
+
+You can mark a folder as a Route group to prevent the folder being included in the route url path
+Which is some times are called hidden dirs.
+
+Use case:
+	 incase you are organizing your project into multiple folders those folders dont want to include in the url
+
+npx create-next-app@latest
+√ What is your project named? ... route-group
+√ Would you like to use TypeScript? ... No / Yes
+√ Would you like to use ESLint? ... No / Yes
+√ Would you like to use Tailwind CSS? ... No / Yes
+√ Would you like your code inside a `src/` directory? ... No / Yes
+√ Would you like to use App Router? (recommended) ... No / Yes
+√ Would you like to use Turbopack for `next dev`? ... No / Yes
+√ Would you like to customize the import alias (`@/*` by default)? ... No / Yes
+√ What import alias would you like configured? ... @/*
+
+folder convention
+	(folderName) (auth)
+		|	
+		login
+
+
+/app/(auth)/login/page.js
+export default function loginPage(){
+    return <h1>Login Page</h1>
+}
+/app/(auth)/register/page.js
+export default function RegistrationPage() {
+    return <h1>Registeration</h1>
+}
+
+/app/(marketing)/about/page.js
+export default function AboutPage() {
+    return <h1>About</h1>
+}
+
+										Layouts and Route Groups
+
+/src/app/(auth)/layout.js
+export default function AuthLayout({children}){
+    return <div id="AuthLayout">
+            {children}
+    </div>
+}
+This layout shared by login and registration pages
+
+You can have spefic layout as login.
+
+src/app/(auth)/login/layout.js
+export default function LoginLayout({children}){
+    return <div id="LoginLayout">
+            {children}
+    </div>
+}
