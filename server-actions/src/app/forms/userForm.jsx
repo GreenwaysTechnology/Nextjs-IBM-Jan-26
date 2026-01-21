@@ -1,31 +1,12 @@
-'use client'
-
-import { createUser } from "@/app/actions/userAction"
-import { isRedirectError } from "next/dist/client/components/redirect-error"
+import { createUser } from "@/app/actions/userAction";
 
 export default function UserForm() {
-    async function handleSubmit(evt) {
-        evt.preventDefault()
-        //invoke server actions
-        try {
-            //read data and send to server actions
-            const user = {
-                name: evt.target.name.value,
-                email: evt.target.email.value
-            }
-            const result = await createUser(user)
-            alert(JSON.stringify(result))
-        }
-        catch (err) {
-            if (isRedirectError(err)) throw err
-        }
-    }
-    return <form onSubmit={handleSubmit}>
+    return <form action={createUser} method="POST">
         <div>
-            <input type="text" name="name" placeholder="name" required />
+            <input type="text" name="name" placeholder="Name" required />
         </div>
         <div>
-            <input type="email" name="email" placeholder="email" required />
+            <input type="email" name="email" placeholder="Email" required />
         </div>
         <div>
             <button type="submit">Create User</button>

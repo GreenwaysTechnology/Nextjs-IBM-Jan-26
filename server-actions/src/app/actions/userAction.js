@@ -21,6 +21,9 @@ import { redirect } from "next/navigation"
 export async function createUser(data) {
     //process the data
     console.log(data)
+    console.log(data.get('name'), data.get('email'))
     //redirect to success page
-    redirect('/success')    
+    // redirect('/success')    
+    redirect(`/success?name=${encodeURIComponent(data.get("name"))}&email=${encodeURIComponent(data.get("email"))}`);
+
 }
