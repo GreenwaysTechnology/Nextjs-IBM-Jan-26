@@ -1,22 +1,18 @@
 
+//route segmentation options
+export const fetchCache = 'force-no-store'
+// export const fetchCache = 'force-cache'
+export const revalidate = 2
+
+
 export async function getTime() {
+    //const url ='https://www.timeapi.io/api/Time/current/zone?timeZone=Asia/Kolkata'
     const url = "http://localhost:8080/api/timezone/Asia/Kolkata"
     //enable cache
-    const response = await fetch(url, {
-        cache: 'force-cache', next: {
-            tags: ['timerTag']
-        }
-    })
+    const response = await fetch(url, { cache: 'force-cache', next: { revalidate: 2 } })
     const data = await response.json()
     return data
 }
-
-export async function generateStaticParams() {
-    return [{
-        city: 'Kolkata'
-    }]
-}
-
 export default async function TimeCachePage() {
     const data = await getTime()
     return <div className="m-20">
