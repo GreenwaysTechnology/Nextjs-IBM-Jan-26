@@ -5260,3 +5260,208 @@ The user you are looking for doesn’t exist.
 
 Now here  the not-found.js is automatically caught.
 &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+...
+ 						Caching,Revalidation,ISR
+...........................................................................................................................................................................................
+What is caching?
+
+ Caching means we dont need to call method more number of times if that method return same value.
+
+Normal function execution
+
+function add(a,b){
+   console.log('add is called')
+   return a + b
+}
+
+add(1,1)
+add(1,1)
+add(1,1)
+add(1,1)
+add(1,1)
+
+here function takes same input, returns same output,but it is called evertime...
+This approach degrades app performance, instead the returned value can be saved in memory or some other place, with same arg , if method called, we dont need to invoke again and again, rather returns result from the memory or some place which is called cache.
+
+Request Memoization:
+
+         if "fetch" function is called in a single tree  with same url for same data no of times
+that means if you call in the layout, again if call in nested layout , again in page , inside page  with in generateMetadata, generateStaticParams... fetch call is cached in the layout itself..
+
+<layout> - fetch('/someapi') - called and cached
+  |
+  <page> - fetch('/someapi') - will take from cache, no api call is made against    server
+   |
+   generateMetadata -fetch('/someapi') -will take from cache, no api call is made against server
+   |
+   generateStaticParams-fetch('/someapi') -will take from cache, no api call is made  against server
+   |
+   -Render completed - cache is reset.
+
+
+  "React extends the fetch API to automatically memoize requests that have the same URL and options.
+ This means you can call a fetch function for the same data in multiple places in a React component tree while only executing it once."
+
+What if i want to use other than fetch api, like axios?
+
+ you can use axios, but i lacks memoziation , that means that api is not cached by default.
+
+ if want caching with axios, "react cache"
+
+ const cachedFn = cache(fn);
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&											Caching implementation
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+√ What is your project named? ... caching-isr
+√ Would you like to use TypeScript? ... No / Yes
+√ Which linter would you like to use? » None
+√ Would you like to use Tailwind CSS? ... No / Yes
+√ Would you like your code inside a `src/` directory? ... No / Yes
+√ Would you like to use App Router? (recommended) ... No / Yes
+√ Would you like to use Turbopack? (recommended) ... No / Yes
+√ Would you like to customize the import alias (`@/\*` by default)? ... No / Yes
+√ What import alias would you like configured? ... @/*
+
+export async function getTime(){
+    const url ='https://www.timeapi.io/api/Time/current/zone?timeZone=Asia/Kolkata'
+    const response = await fetch(url)
+    const data = await response.json()
+    return data
+}
+
+export default async function TimeCachePage(){
+    const data = await getTime()
+
+    return <div className="m-20">
+        <h1 className="font-bold">Time Now : {new Date(data.dateTime).toLocaleTimeString()}</h1>
+    </div>
+}
+After running:
+http://localhost:3000/timecache/Kolkata
+
+You can see the result is time updated whenever you refresh the page.
+You are getting live data, meaning that "caching is disabled by default".
+
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+ 									Enabling Cache
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+We can enable cache as part of fetch api or through route segment options
+
+
+export async function getTime() {
+    const url = 'https://www.timeapi.io/api/Time/current/zone?timeZone=Asia/Kolkata'
+    //next js has extended fetch api to support server cache.
+    //{cache:'force-cache'} - option only for next js not for regular apis
+ 
+    const response = await fetch(url, { cache: 'force-cache' })
+    const data = await response.json()
+    return data
+}
+
+export default async function TimeCachePage() {
+    const data = await getTime()
+
+    return <div className="m-20">
+        <h1 className="font-bold">Time Now : {new Date(data.dateTime).toLocaleTimeString()}</h1>
+    </div>
+}
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+ 								   Cache Configuration via Route Segment Options
+
+Route Segment options are global variables provided by next.js to supply global settings or page level or layout level settings.
+https://nextjs.org/docs/app/api-reference/file-conventions/route-segment-config
+
+Every segment options variable must be exported by default when we override in our code where ever, like page,layout,root layouer
+syntax
+export const variableName=overridenValue
+
+eg:
+
+src/app/timecache/[city]/page.js
+//route segment options
+//to enable cache
+// export const fetchCache = 'force-cache'
+
+//to disable cache
+
+export const fetchCache = 'force-no-store'
+
+
+export async function getTime() {
+    const url = `https://www.timeapi.io/api/Time/current/zone?timeZone=Asia/Kolkata`
+    const response = await fetch(url, { cache: 'force-cache' })
+    return await response.json()
+}
+export async function getTime_v2() {
+    const url = `https://www.timeapi.io/api/Time/current/zone?timeZone=Asia/Kolkata`
+    const response = await fetch(url)
+    return await response.json()
+}
+
+export default async function TimeCachePage() {
+    const data = await getTime()
+    const data1 = await getTime_v2()
+    return <div className="m-20">
+        <h1 className="font-bold">Time Now V1: {new Date(data.dateTime).toLocaleTimeString()}</h1>
+        <h1 className="font-bold">Time Now V2: {new Date(data1.dateTime).toLocaleTimeString()}</h1>
+
+    </div>
+}
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+ 								Layout or root layout level route Segment options
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+if you define segments options in layout level or root layout level, that options will be applied across the application or with in the nested layout level.
+src/app/layout.js
+ 
+export const fetchCache = 'force-no-store'
+
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {children}
+      </body>
+    </html>
+  );
+}
+
+Based on the above code, the cache will be enabled across the application
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+ 										Can we override global settings
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+
+We can override the global settings inside page or layout or as part of fetch api.
+
+
+src/app/timecache/[id]/page.js
+
+//route segment option
+//disable cache for this page
+export const fetchCache = 'force-no-store'
+
+export async function getTime() {
+    const url = 'https://www.timeapi.io/api/Time/current/zone?timeZone=Asia/Kolkata'
+    //next js has extended fetch api to support server cache.
+    //{cache:'force-cache'} - option only for next js not for regular apis
+
+    // const response = await fetch(url, { cache: 'force-cache' })
+    const response = await fetch(url)
+    const data = await response.json()
+    return data
+}
+
+export default async function TimeCachePage() {
+    const data = await getTime()
+
+    return <div className="m-20">
+        <h1 className="font-bold">Time Now : {new Date(data.dateTime).toLocaleTimeString()}</h1>
+    </div>
+}
+
