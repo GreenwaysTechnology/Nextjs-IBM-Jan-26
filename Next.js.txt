@@ -5936,14 +5936,14 @@ Middlewares
 What is middleware?
     middleware is function has code to authorize the user and show pages accordingly.
 
-src/middleware.js
+src/proxy.js
    
   This code is called before any route is accessed.
   middleware is function which takes input as req object and return response object
 
 import { NextResponse } from "next/server"
 
-export function middleware(req) {
+export function proxy(req) {
     console.log("middleware is called")
     const session = req.cookies.get("session")?.value
     if (req.nextUrl.pathname.startsWith("/dashboard") && !session) {
@@ -5955,6 +5955,277 @@ export function middleware(req) {
 export const config = {
     matcher: ["/dashboard/:/path*"]
 }
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+										JWT token based auth
+&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
+Instead of storing a plain session ID in the cookie, we’ll store a signed JWT token containing user info.
+
+🔄 Flow with JWT
+
+User logs in → /api/login issues JWT with user info → stored in secure cookie.
+Middleware checks and validates JWT before accessing /dashboard.
+Server components (cookies() + verifyJwt) can decode session.
+Logout → cookie deleted.
+
+
+JWT:
+npx create-next-app@latest
+√ What is your project named? ... authauthorize-jwttoken
+√ Would you like to use TypeScript? ... No / Yes
+√ Which linter would you like to use? » None
+√ Would you like to use Tailwind CSS? ... No / Yes
+√ Would you like your code inside a `src/` directory? ... No / Yes
+√ Would you like to use App Router? (recommended) ... No / Yes
+√ Would you like to use Turbopack? (recommended) ... No / Yes
+√ Would you like to customize the import alias (`@/*` by default)? ... No / Yes
+√ What import alias would you like configured? ... @/*
+
+
+npm install jose
+
+src/app/lib/jwt.js
+import { SignJWT, jwtVerify } from "jose";
+
+const SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "super-secret-key");
+
+//sign JWT
+export async function signJWT(payload) {
+    return await new SignJWT(payload)
+        .setProtectedHeader({ alg: "HS256" })
+        .setExpirationTime("1h") // 1 hour expiry
+        .sign(SECRET);
+}
+//verify JWT token is it valid or not
+export async function verifyJwt(token) {
+    try {
+        const { payload } = await jwtVerify(token, SECRET);
+        return payload;
+    } catch (err) {
+        console.error("JWT verify error:", err.message);
+        return null;
+    }
+}
+
+src/app/api/login/route.js
+import { cookies } from "next/headers";
+// import { signJWT } from "../../lib/jwt";
+import { signJWT } from '@/app/lib/jwt'
+export async function POST(req) {
+    const { username, password } = await req.json();
+
+    // ✅ Replace with real authentication
+    if (username === "admin" && password === "123") {
+        // Create session token (in real apps use JWT or DB session id)
+        const token = await signJWT({ username, role: "admin" });
+        const cookieStore = await cookies()
+        cookieStore.set("session", token, {
+            httpOnly: true,   // cannot be accessed by JS
+            secure: process.env.NODE_ENV === "production",    // only over HTTPS
+            sameSite: "strict",
+            path: "/",
+            maxAge: 60 * 60,  // 1 hour
+        });
+        return Response.json({ success: true });
+    }
+
+    return Response.json({ success: false, message: "Invalid credentials" }, { status: 401 });
+}
+...........................................................................................................................................................
+							Next.js GraphQL Integration
+...........................................................................................................................................................
+ What is your project named? ... graphql-nextclient
+√ Would you like to use TypeScript? ... No / Yes
+√ Would you like to use ESLint? ... No / Yes
+√ Would you like to use Tailwind CSS? ... No / Yes
+√ Would you like to use `src/` directory? ... No / Yes
+√ Would you like to use App Router? (recommended) ... No / Yes
+√ Would you like to customize the default import alias (@/*)? ... No / Yes
+√ What import alias would you like configured? ... @/*
+
+install libs:
+
+npm install @apollo/client@latest @apollo/experimental-nextjs-app-support
+
+src/app/lib/client.js
+
+import { ApolloClient, HttpLink, InMemoryCache } from "@apollo/client";
+
+import {
+    registerApolloClient,
+} from "@apollo/experimental-nextjs-app-support";
+
+export const { getClient } = registerApolloClient(() => {
+    return new ApolloClient({
+        cache: new InMemoryCache(),
+        link: new HttpLink({
+            // https://studio.apollographql.com/public/spacex-l4uc6p/
+            uri: "https://countries.trevorblades.com/",
+            // you can disable result caching here if you want to
+            // (this does not work if you are rendering your page with `export const dynamic = "force-static"`)
+            // fetchOptions: { cache: "no-store" },
+        }),
+    });
+});
+
+
+src/app/countries/page.js
+
+import { gql } from "@apollo/client"
+import { getClient } from "../lib/client"
+
+//Declare Query
+const query = gql`query {
+   countries {
+        name
+    }
+  }
+`
+
+export default async function CountriesPage() {
+    const { data: { countries } } = await getClient().query({ query })
+
+    return <div>
+        <h1>Countries Info From Graphql Server</h1>
+        <ul>
+            {countries.map(country => {
+                return <li>
+                    <h3>{country.name}</h3>
+                </li>
+            })}
+        </ul>
+    </div>
+}
+...............................................End........................................................
+
+
+
+
+src/app/api/logout.js
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+
+export async function POST() {
+  const cookieStore = await cookies()
+  cookieStore.delete("session"); // removes the cookie
+  redirect('/')
+}
+
+src/app/components/Login.jsx
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export default function Login() {
+    const [username, setUsername] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const router = useRouter();
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        setError("");
+
+        const res = await fetch("/api/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+        });
+
+        if (res.ok) {
+            router.push("/dashboard"); // redirect on success
+        } else {
+            const data = await res.json();
+            setError(data.message || "Login failed");
+        }
+    }
+
+    return (
+        <div className="p-6 max-w-md mx-auto">
+            <h1 className="text-xl font-bold mb-4">Login</h1>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+                <input
+                    className="border p-2 rounded"
+                    placeholder="Username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                />
+                <input
+                    type="password"
+                    className="border p-2 rounded"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                />
+                {error && <p className="text-red-500">{error}</p>}
+                <button
+                    type="submit"
+                    className="bg-blue-600 text-white py-2 rounded"
+                >
+                    Login
+                </button>
+            </form>
+        </div>
+    );
+}
+
+src/app/login/page.js
+import Login from "@/app/login/components/Login";
+
+export default function LoginPage() {
+    return <div>
+        <Login />
+    </div>
+}
+
+src/app/dashboard/page.js
+import { cookies } from "next/headers";
+import { verifyJwt } from "@/app/lib/jwt";
+
+export default async function Dashboard() {
+    const cookieStore = await cookies()
+    const token = cookieStore.get("session")?.value;
+    const session = token ? await verifyJwt(token) : null;
+    console.log(session)
+    return (
+        <div className="p-6">
+            <h1 className="text-2xl font-bold">Dashboard</h1>
+            {session ? (
+                <>
+                    <p>Welcome, user with session: {session.username} </p>
+                    <form action="/api/logout" method="post">
+                        <button className="bg-red-500 text-white px-4 py-2 rounded mt-4">
+                            Logout
+                        </button>
+                    </form>
+                </>
+            ) : (
+                <p>You are not logged in.</p>
+            )}
+        </div>
+    );
+}
+
+src/middleware.js
+import { NextResponse } from "next/server";
+import { verifyJwt } from "@/app/lib/jwt";
+
+
+export async function middleware(req) {
+  const token = req.cookies.get("session")?.value;
+  const session = token ? await verifyJwt(token) : null;
+
+  // Protect /dashboard
+  if (req.nextUrl.pathname.startsWith("/dashboard") && !session) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/dashboard/:path*"],
+};
+
 
 
 
